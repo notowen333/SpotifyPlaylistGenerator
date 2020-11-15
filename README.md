@@ -1,0 +1,1 @@
+This is a Node.js app to generate a playlist from your Spotify library. First validates an account using Spotify's OAuth flow. Then, looks at your top songs, takes the artists of those top songs, uses Spotify's recomended artists call on those artists, and takes a selection of those artists' top songs. 

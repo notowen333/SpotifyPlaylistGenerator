@@ -1,0 +1,17 @@
+{
+  "name": "spotify-client",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "enquirer": "^2.3.6",
+    "spotify-web-api-node": "^4.0.0"
+  }
+}

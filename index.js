@@ -20,7 +20,8 @@ function generateState(len) {
     return state.join("");
 }
 
-function shuffle(array) {
+function shuffle(set) {
+    var array = Array.from(set);
     var currentIndex = array.length, temporaryValue, randomIndex;
   
     // While there remain elements to shuffle...
@@ -28,6 +29,7 @@ function shuffle(array) {
   
       // Pick a remaining element...
       randomIndex = Math.floor(Math.random() * currentIndex);
+
       currentIndex -= 1;
   
       // And swap it with the current element.
@@ -38,7 +40,6 @@ function shuffle(array) {
   
     return array;
   }
-
 
 
 async function main() {
@@ -73,80 +74,50 @@ async function main() {
         err => { console.error(`authorizationCodeGrant ${err}`); throw err; }
     );
 
-    
-    const result = await spotifyApi.getMe()
-        .catch(err => { console.error(err); throw err; })
-
-    
-
+    var titlelist = [];
+    titlelist.push(possibleTitles[randomInt(0, possibleTitles.length - 1)]);
+    titlelist.push(possibleTitles[randomInt(0, possibleTitles.length - 1)]);
+    const title = titlelist.join(" ")
 
     // create playlist for authenticated user
-
-
-    const title = possibleTitles[randomInt(0, possibleTitles.length - 1)] + " " + possibleTitles[randomInt(0, possibleTitles.length - 1)];
-
-    await spotifyApi.getMe().then(
-        data => {
-            spotifyApi.createPlaylist(data.body.id,title).then(
-                data => {
-                    console.log('Playlist ID: ' + data.body.id);
-                },
-                err =>
-                    { console.error(err); }
-            );
-        },
-        err => { console.error(err); }
-    )
-    
-    
-
+    const me = spotifyApi.getMe();
+    const playlist = spotifyApi.createPlaylist((await me).body.id, title);
+    const playlistId = (await playlist).body.id;
 
     // saves the artist ids of your top 20 tracks to variable artistIds
-    const artistIds = await spotifyApi.getMyTopTracks().then(
-        data => {
-            let topTracks = data.body.items;
-            let topArtists = topTracks.map(function(t){
-                return t.artists;
-            });
-
-            topIds = [];
-            for ( i=0; i < topArtists.length; ++i)
-            {
-                topIds.push(topArtists[i][0].id);
-            }
-            return topIds;   
-        },
-        err => { console.error(err); }
-    ); 
+    const topTracksData = spotifyApi.getMyTopTracks();
+    const artistIds = (await topTracksData).body.items.map(t => t.artists[0].id);
 
 
     // saves the artistsIds of related artists of your top tracks to list l, then saves uniques to uniqueSongslist
-    l = [];
-    for (i = 0; i < artistIds.length; ++i)
+    
+    //assert we have nonempty list
+
+    console.assert(artistIds.length > 0);
+
+    let uniqueSongs = new Set();
+    for (currartist = 0; currartist < artistIds.length; ++currartist)
     {
-        await spotifyApi.getArtistRelatedArtists(artistIds[i]).then(
+        await spotifyApi.getArtistRelatedArtists(artistIds[currartist]).then(
             data => 
             {
                 let relatedArtists = data.body.artists;
-                for (k = 0; k < relatedArtists.length; ++k)
+                for (related = 0; related < relatedArtists.length; ++related)
                 {
-                    l.push(relatedArtists[k].id);
+                    uniqueSongs.add(relatedArtists[related].id);
                 }
             },
             err => { console.error(err); }
         );
     }
-    let uniqueSongs = new Set(l);
-    let uniqueSongslist = Array.from(uniqueSongs);
-    shuffle(uniqueSongslist);
 
-
-
+    var uniqueSongsList = shuffle(uniqueSongs);
+    
     // takes top track from each suggested artist
     suggestedSongIds = [];
     for (i = 0; i < 10; ++i)
     {
-        await spotifyApi.getArtistTopTracks(uniqueSongslist[i],'US').then(
+        await spotifyApi.getArtistTopTracks(uniqueSongsList[i],'US').then(
             data =>
             {
                 let topTracks = data.body.tracks;
@@ -158,29 +129,16 @@ async function main() {
 
     
     // add tracks
-    await prompt([{
-        type: 'input',
-        name: 'id',
-        message: 'Enter your playlistID from above'
-    }]).then(
-        data =>
-        {
-            const id = new String(data.id)
-            spotifyApi.addTracksToPlaylist(id, suggestedSongIds).then(
-                data =>
+    spotifyApi.addTracksToPlaylist(playlistId, suggestedSongIds).then(
+            data =>
                 {
                     console.log('Nice!')
                 },
                 err => { console.error(err); }
             );
         }
-    );
-    
 
 
-
-
-}
 
 if (require.main === module) {
     main().catch(
